@@ -1,0 +1,185 @@
+/* e202sa-board – 다크 테마 & 블랙보드 스타일 */
+
+:root {
+  --bg-dark: #0f0f0f;
+  --bg-card: #1a1a1a;
+  --border: #2d2d2d;
+  --text: #e8e8e8;
+  --text-muted: #888;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Controller (index) */
+.controller-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+.controller-wrap h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.tabs button:hover {
+  background: #252525;
+}
+
+.tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.tab-panel textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.tab-panel textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.actions button:hover {
+  background: #252525;
+}
+
+.actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.actions button.primary:hover {
+  background: var(--accent-hover);
+}
+
+.actions button.danger:hover {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+.save-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Board (full screen) */
+.board-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow: auto;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.board-content {
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+  word-break: break-word;
+  white-space: pre-wrap;
+  transition: font-size 0.15s ease;
+}
+
+.board-content.empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Markdown 간단 스타일 (보드) */
+.board-content ul {
+  text-align: left;
+  display: inline-block;
+  list-style: disc;
+  padding-left: 1.5em;
+}
+
+.board-content li {
+  margin: 0.25em 0;
+}
+
+.board-content input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+.board-content p {
+  margin: 0.5em 0;
+}
+
+.board-content strong {
+  font-weight: 700;
+}

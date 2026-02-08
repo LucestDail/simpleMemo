@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>보드 컨트롤러 · e202sa-board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="bg-[#0f0f0f] text-gray-200 min-h-screen">
+  <div class="controller-wrap max-w-2xl mx-auto p-4 md:p-6">
+    <h1 class="text-lg font-semibold mb-4 text-gray-100">디지털 블랙보드 · 컨트롤러</h1>
+
+    <div class="tabs flex gap-1 mb-4 flex-wrap">
+      <button type="button" class="tab-btn px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm" data-tab="general">General</button>
+      <button type="button" class="tab-btn px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm" data-tab="todo">To-Do</button>
+      <button type="button" class="tab-btn px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm" data-tab="links">Links</button>
+      <button type="button" class="tab-btn px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm" data-tab="ideas">Ideas</button>
+    </div>
+
+    <div class="tab-panels">
+      <div class="tab-panel hidden" data-panel="general">
+        <textarea class="memo-input w-full min-h-[200px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" data-tab="general" placeholder="메모 입력 (Markdown: - [ ] 체크박스, - 불렛)"></textarea>
+      </div>
+      <div class="tab-panel hidden" data-panel="todo">
+        <textarea class="memo-input w-full min-h-[200px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" data-tab="todo" placeholder="오늘 할 일 (예: - [ ] 작업1)"></textarea>
+      </div>
+      <div class="tab-panel hidden" data-panel="links">
+        <textarea class="memo-input w-full min-h-[200px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" data-tab="links" placeholder="링크나 메모"></textarea>
+      </div>
+      <div class="tab-panel hidden" data-panel="ideas">
+        <textarea class="memo-input w-full min-h-[200px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" data-tab="ideas" placeholder="아이디어 메모"></textarea>
+      </div>
+    </div>
+
+    <div class="board-colors mt-4 flex items-center gap-4 flex-wrap">
+      <span class="text-sm text-gray-400">보드 색상:</span>
+      <label class="flex items-center gap-2 text-sm">
+        배경 <input type="color" id="color-bg" value="#000000" class="w-9 h-9 rounded border border-gray-600 cursor-pointer bg-transparent" />
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        글자 <input type="color" id="color-text" value="#ffffff" class="w-9 h-9 rounded border border-gray-600 cursor-pointer bg-transparent" />
+      </label>
+    </div>
+
+    <div class="actions flex gap-2 mt-4 flex-wrap">
+      <button type="button" id="btn-clear" class="px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm hover:bg-gray-700">Quick Clear</button>
+      <button type="button" id="btn-refresh-board" class="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">노트북 화면 새로고침</button>
+    </div>
+
+    <p class="save-hint text-xs text-gray-500 mt-2">자동 저장 (500ms 디바운스) · Markdown 지원</p>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const DEBOUNCE_MS = 500;
+    const socket = io();
+    const tabIds = ['general', 'todo', 'links', 'ideas'];
+
+    let state = {
+      activeTab: 'general',
+      tabs: Object.fromEntries(tabIds.map((id) => [id, { content: '', bgColor: '#000000', textColor: '#ffffff' }])),
+    };
+    let debounceTimer = null;
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.tab-panel');
+    const inputs = document.querySelectorAll('.memo-input');
+    const btnClear = document.getElementById('btn-clear');
+    const btnRefreshBoard = document.getElementById('btn-refresh-board');
+    const colorBg = document.getElementById('color-bg');
+    const colorText = document.getElementById('color-text');
+
+    function setActiveTab(id) {
+      state.activeTab = id;
+      tabBtns.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === id);
+        btn.classList.toggle('bg-blue-600', btn.dataset.tab === id);
+        btn.classList.toggle('border-blue-600', btn.dataset.tab === id);
+      });
+      panels.forEach((p) => {
+        p.classList.toggle('hidden', p.dataset.panel !== id);
+      });
+    }
+
+    function applyStateToUI(data) {
+      if (!data || !data.tabs) return;
+      state.activeTab = data.activeTab || state.activeTab;
+      state.tabs = { ...state.tabs, ...data.tabs };
+      setActiveTab(state.activeTab);
+      inputs.forEach((el) => {
+        const id = el.dataset.tab;
+        if (state.tabs[id] && el.value !== state.tabs[id].content) {
+          el.value = state.tabs[id].content || '';
+        }
+      });
+      const cur = state.tabs[state.activeTab];
+      if (cur) {
+        colorBg.value = cur.bgColor || '#000000';
+        colorText.value = cur.textColor || '#ffffff';
+      }
+    }
+
+    function save(opts = {}) {
+      const payload = {
+        activeTab: state.activeTab,
+        tabs: {},
+      };
+      inputs.forEach((el) => {
+        const id = el.dataset.tab;
+        const tab = state.tabs[id] || {};
+        payload.tabs[id] = {
+          content: opts.content !== undefined ? opts.content : el.value,
+          bgColor: tab.bgColor,
+          textColor: tab.textColor,
+        };
+      });
+      socket.emit('memo:save', payload);
+    }
+
+    function scheduleSave() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(save, DEBOUNCE_MS);
+    }
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        setActiveTab(btn.dataset.tab);
+        socket.emit('memo:save', { activeTab: state.activeTab });
+      });
+    });
+
+    inputs.forEach((el) => {
+      el.addEventListener('input', scheduleSave);
+    });
+
+    btnClear.addEventListener('click', () => {
+      const id = state.activeTab;
+      const input = document.querySelector(`.memo-input[data-tab="${id}"]`);
+      if (input) {
+        input.value = '';
+        state.tabs[id] = state.tabs[id] || {};
+        state.tabs[id].content = '';
+        const tab = state.tabs[id];
+        socket.emit('memo:save', {
+          activeTab: state.activeTab,
+          tabs: { [id]: { content: '', bgColor: tab.bgColor, textColor: tab.textColor } },
+        });
+      }
+    });
+
+    colorBg.addEventListener('input', () => {
+      const id = state.activeTab;
+      state.tabs[id] = state.tabs[id] || {};
+      state.tabs[id].bgColor = colorBg.value;
+      socket.emit('memo:save', { activeTab: state.activeTab, tabs: { [id]: { bgColor: colorBg.value } } });
+    });
+    colorText.addEventListener('input', () => {
+      const id = state.activeTab;
+      state.tabs[id] = state.tabs[id] || {};
+      state.tabs[id].textColor = colorText.value;
+      socket.emit('memo:save', { activeTab: state.activeTab, tabs: { [id]: { textColor: colorText.value } } });
+    });
+
+    btnRefreshBoard.addEventListener('click', () => {
+      socket.emit('board:refresh');
+    });
+
+    socket.on('memo:update', applyStateToUI);
+    socket.on('memo:error', (msg) => console.error('memo:error', msg));
+
+    fetch('/api/memo')
+      .then((r) => r.json())
+      .then(applyStateToUI)
+      .catch(() => {});
+  </script>
+</body>
+</html>

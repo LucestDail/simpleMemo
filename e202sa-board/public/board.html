@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>블랙보드 · e202sa-board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="m-0 overflow-hidden">
+  <div id="board-wrap" class="board-wrap fixed inset-0 flex items-center justify-center p-6 md:p-8 bg-black text-white">
+    <div id="board-content" class="board-content w-full max-w-full text-center break-words whitespace-pre-wrap">
+      로딩 중…
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const wrap = document.getElementById('board-wrap');
+    const contentEl = document.getElementById('board-content');
+
+    const MIN_FONT_PX = 24;
+    const MAX_FONT_PX = 180;
+    const BASE_LENGTH = 80;
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function simpleMarkdownToHtml(text) {
+      if (!text || !text.trim()) return '';
+      const lines = text.split('\n');
+      const out = [];
+      let inList = false;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        const checkbox = trimmed.match(/^-\s*\[([ xX])\]\s*(.*)$/);
+        const bullet = trimmed.match(/^-\s+(.*)$/);
+        if (checkbox) {
+          if (!inList) { out.push('<ul class="list-none pl-0 my-2">'); inList = true; }
+          const checked = checkbox[1].toLowerCase() === 'x';
+          const label = escapeHtml(checkbox[2]);
+          out.push(`<li class="flex items-center justify-center gap-2 my-1"><input type="checkbox" ${checked ? 'checked' : ''} disabled class="w-5 h-5 flex-shrink-0"> <span class="${checked ? 'line-through opacity-80' : ''}">${label}</span></li>`);
+        } else if (bullet) {
+          if (!inList) { out.push('<ul class="list-none pl-0 my-2">'); inList = true; }
+          out.push('<li class="my-1">' + escapeHtml(bullet[1]) + '</li>');
+        } else {
+          if (inList) { out.push('</ul>'); inList = false; }
+          if (trimmed) out.push('<p class="my-1">' + escapeHtml(trimmed) + '</p>');
+          else out.push('<br>');
+        }
+      }
+      if (inList) out.push('</ul>');
+      return out.join('');
+    }
+
+    function fontSizeByLength(len) {
+      if (len <= 0) return MAX_FONT_PX;
+      const scale = Math.max(0.3, Math.min(1, BASE_LENGTH / Math.max(1, len)));
+      return Math.round(MIN_FONT_PX + (MAX_FONT_PX - MIN_FONT_PX) * scale);
+    }
+
+    function render(data) {
+      if (!data || !data.tabs) return;
+      const tab = data.tabs[data.activeTab];
+      if (!tab) return;
+      const raw = (tab.content || '').trim();
+      const html = raw ? simpleMarkdownToHtml(tab.content) : '';
+      const color = tab.textColor || '#ffffff';
+      const bg = tab.bgColor || '#000000';
+
+      wrap.style.backgroundColor = bg;
+      wrap.style.color = color;
+      contentEl.style.color = color;
+
+      if (!raw) {
+        contentEl.innerHTML = '<span class="opacity-50 italic">메모가 비어 있습니다</span>';
+        contentEl.style.fontSize = Math.min(48, MAX_FONT_PX) + 'px';
+        contentEl.classList.add('empty');
+        return;
+      }
+      contentEl.classList.remove('empty');
+      contentEl.innerHTML = html;
+
+      const len = raw.length;
+      const fontSize = fontSizeByLength(len);
+      contentEl.style.fontSize = fontSize + 'px';
+    }
+
+    socket.on('memo:update', render);
+    socket.on('board:refresh', () => location.reload());
+
+    fetch('/api/memo')
+      .then((r) => r.json())
+      .then(render)
+      .catch(() => {
+        contentEl.textContent = '연결 실패';
+        contentEl.style.fontSize = '24px';
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "activeTab": "general",
+  "tabs": {
+    "general": { "content": "", "bgColor": "#000000", "textColor": "#ffffff" },
+    "todo": { "content": "", "bgColor": "#000000", "textColor": "#ffff00" },
+    "links": { "content": "", "bgColor": "#000000", "textColor": "#e0e0e0" },
+    "ideas": { "content": "", "bgColor": "#000000", "textColor": "#90caf9" }
+  },
+  "postIts": []
+}
