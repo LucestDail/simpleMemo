@@ -16,7 +16,7 @@ export function useMemo() {
   const postIts = ref([]);
   let socket = null;
   let saveTimeout = null;
-  const DEBOUNCE_MS = 500;
+  const DEBOUNCE_MS = 100;
 
   async function fetchMemo() {
     try {
