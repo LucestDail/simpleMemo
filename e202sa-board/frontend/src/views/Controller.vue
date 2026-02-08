@@ -3,28 +3,15 @@
     <h1 class="text-lg font-semibold mb-4 text-gray-100">디지털 블랙보드 · 컨트롤러</h1>
     <p v-if="error" class="text-red-400 text-sm mb-2">{{ error }}</p>
     <template v-if="loaded">
-      <div class="tabs flex gap-1 mb-4 flex-wrap">
-        <button
-          v-for="id in tabIds"
-          :key="id"
-          type="button"
-          class="tab-btn px-4 py-2 rounded border text-sm"
-          :class="activeTab === id ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-700 bg-gray-800 text-gray-200'"
-          @click="setActiveTab(id)"
-        >
-          {{ tabLabels[id] }}
-        </button>
-      </div>
-
-      <div class="tab-panels mb-4">
-        <div v-for="id in tabIds" :key="id" v-show="activeTab === id" class="tab-panel">
-          <textarea
-            :value="tabs[id]?.content ?? ''"
-            class="w-full min-h-[160px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :placeholder="`${tabLabels[id]} 메모 (Markdown: - [ ] 체크박스, - 불렛)`"
-            @input="onTabInput(id, $event)"
-          />
-        </div>
+      <!-- 단일 메모 (분류 없음) -->
+      <div class="mb-4">
+        <label class="block text-sm text-gray-400 mb-1">메모</label>
+        <textarea
+          :value="content"
+          class="w-full min-h-[180px] p-3 rounded bg-gray-800 border border-gray-700 text-gray-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="메모 입력..."
+          @input="onContentInput($event)"
+        />
       </div>
 
       <div class="board-colors flex items-center gap-4 flex-wrap mb-4">
@@ -33,7 +20,7 @@
           배경
           <input
             type="color"
-            :value="tabs[activeTab]?.bgColor ?? '#000000'"
+            :value="boardBg"
             class="w-9 h-9 rounded border border-gray-600 cursor-pointer bg-transparent"
             @input="onBgColor($event)"
           />
@@ -42,50 +29,59 @@
           글자
           <input
             type="color"
-            :value="tabs[activeTab]?.textColor ?? '#ffffff'"
+            :value="boardTextColor"
             class="w-9 h-9 rounded border border-gray-600 cursor-pointer bg-transparent"
             @input="onTextColor($event)"
           />
         </label>
       </div>
 
-      <section class="postits mb-4">
+      <!-- 포스트잇: 추가·수정·삭제 -->
+      <section class="mb-4">
         <h2 class="text-sm font-medium text-gray-400 mb-2">포스트잇</h2>
-        <div class="flex flex-wrap gap-2 mb-2">
-          <button
-            type="button"
-            class="px-3 py-1.5 rounded bg-amber-500/80 text-black text-sm font-medium"
-            @click="addPostIt()"
-          >
-            + 추가
-          </button>
-        </div>
+        <button
+          type="button"
+          class="mb-3 px-4 py-2 rounded bg-amber-500 text-black text-sm font-medium hover:bg-amber-400"
+          @click="addPostIt()"
+        >
+          + 포스트잇 추가
+        </button>
         <div class="space-y-2">
           <div
             v-for="p in postIts"
             :key="p.id"
-            class="flex flex-wrap items-start gap-2 p-2 rounded bg-gray-800 border border-gray-700"
+            class="flex flex-wrap items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"
           >
             <input
               type="color"
               :value="p.color"
               class="w-8 h-8 rounded border border-gray-600 cursor-pointer flex-shrink-0"
-              @input="updatePostIt(p.id, { color: $event.target.value })"
+              @input="onPostItColor(p.id, $event)"
             />
             <input
               type="text"
               :value="p.content"
               placeholder="내용"
-              class="flex-1 min-w-0 px-2 py-1 rounded bg-gray-700 text-gray-200 text-sm"
-              @input="updatePostIt(p.id, { content: $event.target.value })"
+              class="flex-1 min-w-[120px] px-2 py-1.5 rounded bg-gray-700 text-gray-200 text-sm"
+              @input="onPostItContent(p.id, $event)"
             />
-            <div class="flex items-center gap-1 text-xs text-gray-500">
-              <label>X <input type="number" :value="p.x" class="w-14 px-1 py-0.5 rounded bg-gray-700 text-gray-200" @input="updatePostIt(p.id, { x: +$event.target.value || 0 })" /></label>
-              <label>Y <input type="number" :value="p.y" class="w-14 px-1 py-0.5 rounded bg-gray-700 text-gray-200" @input="updatePostIt(p.id, { y: +$event.target.value || 0 })" /></label>
-            </div>
+            <span class="text-xs text-gray-500">X</span>
+            <input
+              type="number"
+              :value="p.x"
+              class="w-16 px-1 py-0.5 rounded bg-gray-700 text-gray-200 text-xs"
+              @input="onPostItPos(p.id, 'x', $event)"
+            />
+            <span class="text-xs text-gray-500">Y</span>
+            <input
+              type="number"
+              :value="p.y"
+              class="w-16 px-1 py-0.5 rounded bg-gray-700 text-gray-200 text-xs"
+              @input="onPostItPos(p.id, 'y', $event)"
+            />
             <button
               type="button"
-              class="px-2 py-1 rounded text-red-400 hover:bg-red-900/30 text-sm"
+              class="px-2 py-1 rounded text-red-400 hover:bg-red-900/40 text-sm font-medium"
               @click="removePostIt(p.id)"
             >
               삭제
@@ -94,13 +90,13 @@
         </div>
       </section>
 
-      <div class="actions flex gap-2 flex-wrap">
+      <div class="flex gap-2 flex-wrap">
         <button
           type="button"
           class="px-4 py-2 rounded border border-gray-700 bg-gray-800 text-gray-200 text-sm hover:bg-gray-700"
-          @click="clearTab(activeTab)"
+          @click="clearMemo"
         >
-          Quick Clear (현재 탭)
+          메모 비우기
         </button>
         <button
           type="button"
@@ -110,30 +106,23 @@
           노트북 화면 새로고침
         </button>
       </div>
-      <p class="text-xs text-gray-500 mt-2">자동 저장 (500ms 디바운스) · 실시간 보드 반영</p>
+      <p class="text-xs text-gray-500 mt-2">자동 저장 (100ms) · 실시간 보드 반영</p>
     </template>
     <p v-else class="text-gray-500">로딩 중…</p>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useMemo } from '../composables/useMemo';
 
-const tabIds = ['general', 'todo', 'links', 'ideas'];
-const tabLabels = {
-  general: 'General',
-  todo: 'To-Do',
-  links: 'Links',
-  ideas: 'Ideas',
-};
+const MEMO_ID = 'general';
 
 const {
   loaded,
   error,
-  activeTab,
   tabs,
   postIts,
-  setActiveTab,
   updateTabContent,
   updateTabColors,
   clearTab,
@@ -141,17 +130,39 @@ const {
   updatePostIt,
   removePostIt,
   refreshBoard,
+  saveImmediate,
 } = useMemo();
 
-function onTabInput(id, e) {
-  updateTabContent(id, e.target.value);
+const content = computed(() => tabs[MEMO_ID]?.content ?? '');
+const boardBg = computed(() => tabs[MEMO_ID]?.bgColor ?? '#000000');
+const boardTextColor = computed(() => tabs[MEMO_ID]?.textColor ?? '#ffffff');
+
+function onContentInput(e) {
+  updateTabContent(MEMO_ID, e.target.value);
 }
 
 function onBgColor(e) {
-  updateTabColors(activeTab.value, e.target.value, undefined);
+  updateTabColors(MEMO_ID, e.target.value, undefined);
 }
 
 function onTextColor(e) {
-  updateTabColors(activeTab.value, undefined, e.target.value);
+  updateTabColors(MEMO_ID, undefined, e.target.value);
+}
+
+function clearMemo() {
+  clearTab(MEMO_ID);
+}
+
+function onPostItColor(id, e) {
+  updatePostIt(id, { color: e.target.value });
+}
+
+function onPostItContent(id, e) {
+  updatePostIt(id, { content: e.target.value });
+}
+
+function onPostItPos(id, axis, e) {
+  const v = parseInt(e.target.value, 10) || 0;
+  updatePostIt(id, axis === 'x' ? { x: v } : { y: v });
 }
 </script>

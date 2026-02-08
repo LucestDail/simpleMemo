@@ -67,16 +67,20 @@ export function useMemo() {
     };
   }
 
+  function buildPayload(overrides = {}) {
+    return {
+      activeTab: activeTab.value,
+      tabs: { ...tabs },
+      postIts: postIts.value.map((p) => ({ ...p })),
+      ...overrides,
+    };
+  }
+
   function save(payload = null) {
     clearTimeout(saveTimeout);
     const send = () => {
+      const body = payload || buildPayload();
       if (!socket || !socket.connected) {
-        // 폴백: REST API
-        const body = payload || {
-          activeTab: activeTab.value,
-          tabs: { ...tabs },
-          postIts: postIts.value.map((p) => ({ ...p })),
-        };
         fetch('/api/memo', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -87,14 +91,7 @@ export function useMemo() {
           .catch((e) => (error.value = e.message));
         return;
       }
-      socket.emit(
-        'memo:save',
-        payload || {
-          activeTab: activeTab.value,
-          tabs: { ...tabs },
-          postIts: postIts.value.map((p) => ({ ...p })),
-        }
-      );
+      socket.emit('memo:save', body);
     };
     saveTimeout = setTimeout(send, DEBOUNCE_MS);
   }
@@ -149,7 +146,7 @@ export function useMemo() {
       height: postIt.height ?? 180,
     };
     postIts.value = [...postIts.value, newOne];
-    saveImmediate({ activeTab: activeTab.value, tabs: { ...tabs }, postIts: postIts.value });
+    saveImmediate(buildPayload({ postIts: postIts.value.map((p) => ({ ...p })) }));
   }
 
   function updatePostIt(id, patch) {
@@ -162,7 +159,7 @@ export function useMemo() {
 
   function removePostIt(id) {
     postIts.value = postIts.value.filter((p) => p.id !== id);
-    saveImmediate({ activeTab: activeTab.value, tabs: { ...tabs }, postIts: postIts.value });
+    saveImmediate(buildPayload({ postIts: postIts.value.map((p) => ({ ...p })) }));
   }
 
   function refreshBoard() {
