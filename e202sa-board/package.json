@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build": "cd frontend && npm ci && npm run build",
-    "install:all": "npm install && cd frontend && npm install",
+    "install:all": "npm install && cd frontend && npm install"
   },
   "keywords": ["blackboard", "memo", "socket.io", "lan"],
   "license": "MIT",
