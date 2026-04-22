@@ -10,10 +10,12 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    host: '0.0.0.0',
+    port: 19090,
+    strictPort: true,
     proxy: {
-      '/api': { target: 'http://127.0.0.1:3000', changeOrigin: true },
-      '/socket.io': { target: 'http://127.0.0.1:3000', ws: true },
+      '/api': { target: 'http://127.0.0.1:19091', changeOrigin: true },
+      '/socket.io': { target: 'http://127.0.0.1:19091', ws: true },
     },
   },
 });
