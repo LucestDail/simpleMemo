@@ -49,7 +49,7 @@
     "offlineSync": true,
     "theme": "auto",
     "boardFontSize": 16,
-    "autoFullscreen": false,
+    "autoFullscreen": true,
     "backupIntervalHours": 24,
     "backupKeep": 10
   }
