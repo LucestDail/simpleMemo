@@ -137,6 +137,56 @@ Vue 3 프로젝트이므로 Vuetify 3 경량 도입 또는 Tailwind + M3 원칙 
 
 ---
 
+### Phase 5 — AI 기능 도입 (예정)
+
+**원칙**
+- AI는 **제안만**, 사용자가 수락해야 반영됨 (자동 덮어쓰기 없음)
+- 키는 서버 `.env`에만 존재, 프런트는 프록시만 호출
+- 실패 시 조용히 비활성, 본 앱 흐름 방해 금지
+- 작은 `✨` 버튼 1개 수준으로만 UI 침투
+
+**5.0 기반 (Phase 0)**
+- [ ] `.env`: `AI_ENABLED`, `AI_PROVIDER=openai`, `AI_API_KEY`, `AI_MODEL=gpt-4o-mini`, `AI_BASE_URL`, `AI_MONTHLY_TOKEN_LIMIT`
+- [ ] `server/ai/` 모듈: `provider.js`(인터페이스) / `openai.js`(어댑터) / `cache.js`(LRU) / `guard.js`(IP rate limit + 월 토큰 카운터)
+- [ ] 단일 라우트 `POST /api/ai/suggest` (task 분기: `meta | summary | todos | qa`)
+- [ ] JSON 모드 강제(`response_format: { type: "json_object" }`), 5s 타임아웃
+- [ ] 프런트 `composables/useAi.js` — 서버만 바라보는 얇은 래퍼
+- [ ] Settings에 "AI 사용" 토글 + 연결 상태 뱃지 + 개인정보 전송 고지 1줄
+
+**5.1 체감 효용 큰 기능부터 (Phase 1)**
+- [ ] **제목·탭·색상 자동 제안** — 본문 ≥ 2줄 + `✨` 칩 클릭 → `{title, tab, color}` 수락 UI
+- [ ] **요약 / 재작성** — 포스트잇 편집 모드 `✨ 요약` → 미리보기 + `[적용]`
+
+**5.2 쓰기 흐름 강화 (Phase 2)**
+- [ ] **체크리스트 추출** — 자유 메모 → `{text, done}[]`, `checklist` 필드에 세팅
+- [ ] **유사 메모 경고** — 새 메모 추가 시 최근 항목과 유사도 검사 (키워드 → Phase 3에서 임베딩으로 교체)
+
+**5.3 검색·회고 (Phase 3)**
+- [ ] **자연어 검색 / Q&A** — 검색창 프리픽스 `?`
+- [ ] **임베딩 인덱스** — `text-embedding-3-small`, `data/embeddings.json` 변경분만 증분 계산
+- [ ] **주간·일간 리뷰 카드** — 기간 선택 요약 위젯
+
+**5.4 멀티모달 (Phase 4, 선택)**
+- [ ] **음성 → 텍스트** (Whisper)
+- [ ] **이미지 OCR** (포스트잇 사진 → 텍스트)
+
+**보안·비용·운영 체크리스트**
+- [ ] 키는 서버 `.env`만, `localStorage`·번들 금지
+- [ ] `POST /api/ai/*` per-IP rate limit (예: 10 req/min)
+- [ ] 요청 본문 최대 4KB / 500토큰 입력 상한
+- [ ] 월 토큰 카운터 초과 시 자동 OFF + Settings 경고
+- [ ] 응답 지연 5s 초과 시 조용히 fallback
+- [ ] Settings에 "AI 사용 시 OpenAI로 메모 내용이 전송됩니다" 고지
+- [ ] LAN 운영 환경: 아웃바운드 443 허용 여부 확인
+
+**구현 착수 전 확정할 항목**
+1. 1차 기능 범위: 5.1 둘 다? 또는 제목 제안만?
+2. UI 노출: `✨` 버튼만 vs 타이핑 멈춤 시 자동 제안
+3. 기본 모델: `gpt-4o-mini` 확정 여부
+4. 월 토큰 상한(또는 호출 상한) 숫자
+
+---
+
 ## 5. 기술 스택
 
 | 구분 | 기술 | 비고 |
@@ -147,3 +197,4 @@ Vue 3 프로젝트이므로 Vuetify 3 경량 도입 또는 Tailwind + M3 원칙 
 | 스타일 | Tailwind CSS + M3 원칙 | M3 점진 적용 |
 | 저장소 | 파일 시스템 (JSON) | 경량 유지 |
 | 컨테이너 | Docker (Node 20 Alpine) | — |
+| AI (Phase 5) | OpenAI API (호환 엔드포인트로 교체 가능) | 서버 프록시, JSON 모드 강제 |
